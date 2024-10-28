@@ -1,3 +1,4 @@
+version: '3'
 services:
   mysql:
     image: mariadb:11.4
@@ -12,40 +13,27 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     restart: always
-    networks:
-      - default
   litespeed:
     image: litespeedtech/openlitespeed:${OLS_VERSION}-${PHP_VERSION}
     container_name: litespeed
     env_file:
       - .env
     volumes:
+      - ./lsws/php:/usr/local/lsws/lsphp83/etc/php/8.3/litespeed
       - ./lsws/conf:/usr/local/lsws/conf
       - ./lsws/admin-conf:/usr/local/lsws/admin/conf
       - ./bin/container:/usr/local/bin
       - ./sites:/var/www/vhosts/
       - ./acme:/root/.acme.sh/
       - ./logs:/usr/local/lsws/logs/
-    ports:
-      - 80:80
-      - 443:443
-      - 443:443/udp
-      - 7080:7080
     restart: always
     environment:
       TZ: ${TimeZone}
-    networks:
-      - default
   phpmyadmin:
     image: bitnami/phpmyadmin:5.2.0-debian-11-r43
-    ports:
-      - 8080:8080
-      - 8443:8443
     environment:
-        DATABASE_HOST: mysql
+      DATABASE_HOST: mysql
     restart: always
-    networks:
-      - default
   redis:
     image: "redis:alpine"
     logging:
@@ -57,8 +45,13 @@ services:
     environment:
       - REDIS_REPLICATION_MODE=master
     restart: always
-    networks:
-      - default
-networks:
-  default:
-    driver: bridge
+  ftp:
+    image: delfer/alpine-ftp-server
+    network_mode: host
+    ports:
+      - '21:21'
+      - '21000-21010:21000-21010'
+    environment:
+      - USERS=${FTP_USER}|${FTP_PASS}|/var/www/vhosts|1000
+    volumes:
+      - ./sites:/var/www/vhosts/
